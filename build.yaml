@@ -1,0 +1,28 @@
+runtime:
+  dotnet:
+    versions:
+      - 6.0.415
+      - 8.0.100
+  node:
+    versions:
+      - 18.20.2
+      - 20.11.1
+
+matrix:
+  - path: services/api
+    type: dotnet
+    frameworks:
+      - 6.0.415
+  - path: frontend
+    type: node
+    packageManager: pnpm
+    nodeVersions:
+      - 20.11.1
+  - path: libs/ui
+    type: node
+    buildScripts:
+      - build
+
+defaults:
+  concurrency: 4
+  artifactDir: dist

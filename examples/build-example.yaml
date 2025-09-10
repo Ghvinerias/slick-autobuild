@@ -1,0 +1,26 @@
+runtime:
+  dotnet:
+    versions:
+      - 6.0.415
+      - 8.0.100
+  node:
+    versions:
+      - 18.20.2
+      - 20.11.1
+
+matrix:
+  - path: examples/sample-dotnet
+    type: dotnet
+    frameworks:
+      - 6.0.415
+  - path: examples/sample-node
+    type: node
+    packageManager: npm
+    nodeVersions:
+      - 20.11.1
+    buildScripts:
+      - build
+
+defaults:
+  concurrency: 2
+  artifactDir: dist

@@ -1,0 +1,11 @@
+{
+  "name": "sample-node-app",
+  "version": "1.0.0",
+  "description": "Sample Node.js application for slick-autobuild",
+  "scripts": {
+    "build": "echo 'Building Node.js app...'",
+    "test": "echo 'Running tests...'"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

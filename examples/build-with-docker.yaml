@@ -1,0 +1,42 @@
+runtime:
+  dotnet:
+    versions:
+      - 8.0.100
+  node:
+    versions:
+      - 20.11.1
+
+matrix:
+  - path: services/api
+    type: dotnet
+    frameworks:
+      - 8.0.100
+    docker:
+      enabled: true
+      repository: "myorg/api"
+      tags: ["latest", "v1.0.0"]
+      push: true
+      registries: ["docker.io", "ghcr.io"]
+      dockerfile: "Dockerfile"
+      
+  - path: frontend
+    type: node
+    packageManager: pnpm
+    nodeVersions:
+      - 20.11.1
+    docker:
+      enabled: true
+      repository: "myorg/frontend"
+      tags: ["latest", "v1.0.0"] 
+      push: false  # Only build, don't push
+      dockerfile: "Dockerfile"
+      
+  - path: libs/ui
+    type: node
+    buildScripts:
+      - build
+    # No Docker config - just build artifacts
+
+defaults:
+  concurrency: 4
+  artifactDir: dist
