@@ -25,7 +25,7 @@ jobs:
       - name: Get Secrets
         uses: bitwarden/sm-action@v2
         with:
-          access_token: ${{ BW_ACCESS_TOKEN }}
+          access_token: ${{ secrets.BW_ACCESS_TOKEN }}
           base_url: https://vault.bitwarden.com
           secrets: |
             a35d32e4-fc58-4d80-a927-b35400c210f7 > DOCKER_USERNAME
@@ -62,8 +62,8 @@ jobs:
       - name: Send Telegram notification
         uses: appleboy/telegram-action@master
         with:
-          to: ${{ TELEGRAM_CHAT_ID }}
-          token: ${{ TELEGRAM_BOT_TOKEN }}
+          to: ${{ env.TELEGRAM_CHAT_ID }}
+          token: ${{ env.TELEGRAM_BOT_TOKEN }}
           message: |
             🧪 Go Unit Tests: ${{ needs.test.result == 'success' && '✅ Success' || '❌ Failed' }}
 
