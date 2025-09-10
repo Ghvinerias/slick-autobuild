@@ -21,7 +21,20 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    outputs:
+      telegram_chat_id: ${{ steps.secrets.outputs.TELEGRAM_CHAT_ID }}
+      telegram_bot_token: ${{ steps.secrets.outputs.TELEGRAM_BOT_TOKEN }}
     steps:
+      - name: Get Secrets
+        id: secrets
+        uses: bitwarden/sm-action@v2
+        with:
+          access_token: ${{ secrets.BW_ACCESS_TOKEN }}
+          base_url: https://vault.bitwarden.com
+          secrets: |
+            2f3b9e39-4af4-463e-bfae-b35400c41034 > TELEGRAM_CHAT_ID
+            7ceeeaf0-9ce5-4fde-ad1a-b35400c3dcd4 > TELEGRAM_BOT_TOKEN
+
       - name: Checkout code
         uses: actions/checkout@v5
 
@@ -49,19 +62,11 @@ jobs:
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
-      - name: Get Secrets
-        uses: bitwarden/sm-action@v2
-        with:
-          access_token: ${{ secrets.BW_ACCESS_TOKEN }}
-          base_url: https://vault.bitwarden.com
-          secrets: |
-            2f3b9e39-4af4-463e-bfae-b35400c41034 > TELEGRAM_CHAT_ID
-            7ceeeaf0-9ce5-4fde-ad1a-b35400c3dcd4 > TELEGRAM_BOT_TOKEN
       - name: Send Telegram notification
         uses: appleboy/telegram-action@master
         with:
-          to: ${{ env.TELEGRAM_CHAT_ID }}
-          token: ${{ env.TELEGRAM_BOT_TOKEN }}
+          to: ${{ needs.test.outputs.telegram_chat_id }}
+          token: ${{ needs.test.outputs.telegram_bot_token }}
           message: |
             🧪 Go Unit Tests: ${{ needs.test.result == 'success' && '✅ Success' || '❌ Failed' }}
 

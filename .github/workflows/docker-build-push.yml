@@ -33,8 +33,14 @@ jobs:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.should_build == 'true' }}
     runs-on: ubuntu-latest
+    outputs:
+      docker_username: ${{ steps.secrets.outputs.DOCKER_USERNAME }}
+      docker_password: ${{ steps.secrets.outputs.DOCKER_PASSWORD }}
+      telegram_chat_id: ${{ steps.secrets.outputs.TELEGRAM_CHAT_ID }}
+      telegram_bot_token: ${{ steps.secrets.outputs.TELEGRAM_BOT_TOKEN }}
     steps:
       - name: Get Secrets
+        id: secrets
         uses: bitwarden/sm-action@v2
         with:
           access_token: ${{ secrets.BW_ACCESS_TOKEN }}
@@ -54,8 +60,8 @@ jobs:
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKER_USERNAME }}
-          password: ${{ env.DOCKER_PASSWORD }}
+          username: ${{ steps.secrets.outputs.DOCKER_USERNAME }}
+          password: ${{ steps.secrets.outputs.DOCKER_PASSWORD }}
 
       - name: Run tests
         run: go test -v ./...
@@ -89,8 +95,8 @@ jobs:
       - name: Send Telegram notification
         uses: appleboy/telegram-action@master
         with:
-          to: ${{ env.TELEGRAM_CHAT_ID }}
-          token: ${{ env.TELEGRAM_BOT_TOKEN }}
+          to: ${{ needs.build-and-push.outputs.telegram_chat_id }}
+          token: ${{ needs.build-and-push.outputs.telegram_bot_token }}
           message: |
             🐳 Docker image build status: ${{ needs.build-and-push.result == 'success' && '✅ Success' || '❌ Failed' }}
 
