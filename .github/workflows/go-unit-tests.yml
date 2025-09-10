@@ -1,0 +1,69 @@
+name: Go Unit Tests
+
+permissions:
+  contents: read
+  actions: read
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "./**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "./**"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: ["slick-autobuild"]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+
+      - name: Install dependencies
+        run: |
+          cd ${{ matrix.project }}
+          go mod download
+
+      - name: Run tests
+        run: |
+          cd ${{ matrix.project }}
+          go test -v -coverprofile=coverage.out ./...
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./${{ matrix.project }}/coverage.out
+          flags: ${{ matrix.project }}
+          name: ${{ matrix.project }}-coverage
+          fail_ci_if_error: false
+
+  notify:
+    needs: [test]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Telegram notification
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          message: |
+            🧪 Go Unit Tests: ${{ needs.test.result == 'success' && '✅ Success' || '❌ Failed' }}
+
+            Projects tested:
+            - slick-autobuild
+
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.event.after || github.event.pull_request.head.sha }}
+            Triggered by: ${{ github.actor }}
