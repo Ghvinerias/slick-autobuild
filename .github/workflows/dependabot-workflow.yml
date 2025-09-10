@@ -22,7 +22,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.25'
+          go-version: '1.22'
 
       - name: Determine affected projects
         id: affected-projects
@@ -93,7 +93,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.25'
+          go-version: '1.22'
 
       - name: Run Gosec Security Scanner
         uses: securego/gosec@master
@@ -120,7 +120,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.25'
+          go-version: '1.22'
 
       - name: Determine affected projects
         id: affected-projects

@@ -1,0 +1,33 @@
+# Build artifacts
+build/
+out/
+.buildcache/
+slick-autobuild
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+MVP.md
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage.out
+
+# Examples (not needed in production image)
+examples/
+
+# Don't ignore vendor directory - we need it for offline builds
+# vendor/

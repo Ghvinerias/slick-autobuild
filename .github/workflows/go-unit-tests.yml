@@ -8,18 +8,19 @@ on:
   push:
     branches: [main, master]
     paths:
-      - "./**"
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
   pull_request:
     branches: [main]
     paths:
-      - "./**"
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        project: ["slick-autobuild"]
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -27,24 +28,20 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: "1.25"
+          go-version: "1.22"
 
       - name: Install dependencies
-        run: |
-          cd ${{ matrix.project }}
-          go mod download
+        run: go mod download
 
       - name: Run tests
-        run: |
-          cd ${{ matrix.project }}
-          go test -v -coverprofile=coverage.out ./...
+        run: go test -v -coverprofile=coverage.out ./...
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
-          files: ./${{ matrix.project }}/coverage.out
-          flags: ${{ matrix.project }}
-          name: ${{ matrix.project }}-coverage
+          files: ./coverage.out
+          flags: slick-autobuild
+          name: slick-autobuild-coverage
           fail_ci_if_error: false
 
   notify:
@@ -59,9 +56,6 @@ jobs:
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           message: |
             🧪 Go Unit Tests: ${{ needs.test.result == 'success' && '✅ Success' || '❌ Failed' }}
-
-            Projects tested:
-            - slick-autobuild
 
             Repository: ${{ github.repository }}
             Branch: ${{ github.ref_name }}

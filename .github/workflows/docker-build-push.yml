@@ -12,51 +12,27 @@ jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-      changed_projects: ${{ steps.set-matrix.outputs.changed_projects }}
+      should_build: ${{ steps.check-changes.outputs.should_build }}
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 2
 
-      - id: set-matrix
+      - id: check-changes
         run: |
-          CHANGED_DIRS=""
-          CHANGED_PROJECTS=""
-
-          # Full list of project directories
-          ALL_DIRS=$(ls -d */ | cut -f1 -d'/' | grep -v "^\.")
-
-          # Check each directory for changes and a Dockerfile
-          for dir in $ALL_DIRS; do
-            # Skip .github directory and any other hidden directories
-            if [[ "$dir" == .* ]]; then
-              continue
-            fi
-            
-            # Check if directory has changes AND has a Dockerfile
-            if git diff --name-only HEAD^ HEAD | grep "^$dir/" && [ -f "$dir/Dockerfile" ]; then
-              CHANGED_DIRS="$CHANGED_DIRS\"$dir\", "
-              CHANGED_PROJECTS="$CHANGED_PROJECTS$dir, "
-              echo "Found changes and Dockerfile in $dir"
-            fi
-          done
-
-          # Remove trailing comma and space
-          CHANGED_DIRS=${CHANGED_DIRS%, }
-          CHANGED_PROJECTS=${CHANGED_PROJECTS%, }
-
-          # Set matrix output
-          echo "matrix={\"project\":[$CHANGED_DIRS]}" >> $GITHUB_OUTPUT
-          echo "changed_projects=$CHANGED_PROJECTS" >> $GITHUB_OUTPUT
-          echo "Detected changes in: $CHANGED_DIRS"
+          # Check if there are changes to Go files, Dockerfile, or go.mod/go.sum
+          if git diff --name-only HEAD^ HEAD | grep -E '\.(go|mod|sum)$|^Dockerfile$'; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "Changes detected in Go files or Dockerfile"
+          else
+            echo "should_build=false" >> $GITHUB_OUTPUT
+            echo "No relevant changes detected"
+          fi
 
   build-and-push:
     needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.matrix != '{"project":[]}' }}
+    if: ${{ needs.detect-changes.outputs.should_build == 'true' }}
     runs-on: ubuntu-latest
-    strategy:
-      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
     steps:
       - name: Get Secrets
         uses: bitwarden/sm-action@v2
@@ -68,6 +44,7 @@ jobs:
             5f8b4016-fb5d-45fc-9e13-b35400be5c46 > DOCKER_PASSWORD
             2f3b9e39-4af4-463e-bfae-b35400c41034 > TELEGRAM_CHAT_ID
             7ceeeaf0-9ce5-4fde-ad1a-b35400c3dcd4 > TELEGRAM_BOT_TOKEN
+      
       - name: Checkout code
         uses: actions/checkout@v5
 
@@ -81,33 +58,32 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Run tests
-        working-directory: ./${{ matrix.project }}
         run: go test -v ./...
 
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: slickg/${{ matrix.project }}
+          images: slickg/slick-autobuild
           tags: |
             type=raw,value=latest
-            type=semver,pattern={{version}},value=v1.0.0
+            type=semver,pattern={{version}},value=v0.0.1
             type=sha,format=short
             type=ref,event=branch
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: ./${{ matrix.project }}
+          context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=slickg/${{ matrix.project }}:buildcache
-          cache-to: type=registry,ref=slickg/${{ matrix.project }}:buildcache,mode=max
+          cache-from: type=registry,ref=slickg/slick-autobuild:buildcache
+          cache-to: type=registry,ref=slickg/slick-autobuild:buildcache,mode=max
 
   notify:
     needs: [detect-changes, build-and-push]
-    if: ${{ always() && needs.detect-changes.outputs.changed_projects != '' }}
+    if: ${{ always() && needs.detect-changes.outputs.should_build == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Send Telegram notification
@@ -116,10 +92,10 @@ jobs:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           message: |
-            🐳 Docker images build status: ${{ needs.build-and-push.result == 'success' && '✅ Success' || '❌ Failed' }}
+            🐳 Docker image build status: ${{ needs.build-and-push.result == 'success' && '✅ Success' || '❌ Failed' }}
 
-            Projects built and pushed to Docker Hub:
-            ${{ needs.detect-changes.outputs.changed_projects }}
+            Project: slick-autobuild CLI tool
+            Image: slickg/slick-autobuild
 
             Repository: ${{ github.repository }}
             Branch: ${{ github.ref_name }}
