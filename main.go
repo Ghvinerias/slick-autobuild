@@ -28,7 +28,7 @@ func validatePath(path string) error {
 
 	// Check for path traversal attempts that try to escape the working directory
 	if strings.Contains(cleanPath, "..") {
-		return fmt.Errorf("invalid path: path traversal detected in %s", path)
+		return fmt.Errorf("invalid path!: path traversal detected in %s", path)
 	}
 
 	return nil
