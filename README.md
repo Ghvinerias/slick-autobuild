@@ -60,7 +60,7 @@ defaults:
 
 ## Docker Image Packaging
 
-Slick AutoBuild can build and push Docker images to popular registries after successful builds.
+Slick-AutoBuild can build and push Docker images to popular registries after successful builds.
 
 ### Configuration
 
@@ -206,3 +206,4 @@ Build cache is stored in `.buildcache/<key>/` where key is generated from:
 ## Examples
 
 See the `examples/` directory for sample projects and configurations.
+

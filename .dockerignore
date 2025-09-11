@@ -29,5 +29,5 @@ coverage.out
 # Examples (not needed in production image)
 examples/
 
-# Don't ignore vendor directory - we need it for offline builds
-# vendor/
+# Vendor directory (not needed with go mod download)
+vendor/

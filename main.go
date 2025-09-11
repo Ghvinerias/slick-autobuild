@@ -25,12 +25,12 @@ import (
 func validatePath(path string) error {
 	// Clean the path to resolve any .. or . components
 	cleanPath := filepath.Clean(path)
-	
+
 	// Check for path traversal attempts that try to escape the working directory
 	if strings.Contains(cleanPath, "..") {
 		return fmt.Errorf("invalid path: path traversal detected in %s", path)
 	}
-	
+
 	return nil
 }
 
@@ -49,12 +49,12 @@ var (
 // Error exit codes as defined in MVP
 const (
 	ExitSuccess       = 0
-	ExitBuildFailure  = 1 
+	ExitBuildFailure  = 1
 	ExitConfigError   = 2
 	ExitInternalError = 3
 )
 
-const version = "0.0.1-dev"
+const version = "0.0.2-dev"
 
 func main() {
 	flag.Parse()
@@ -136,7 +136,7 @@ func runBuild() error {
 	if !*flagNoDocker {
 		hasDockerProjects := false
 		registriesToLogin := make(map[string]bool)
-		
+
 		for _, task := range plan.Tasks {
 			for _, me := range cfg.Matrix {
 				if me.Path == task.Path && me.Type == task.Kind && me.Docker != nil && me.Docker.Enabled {
@@ -153,18 +153,18 @@ func runBuild() error {
 				}
 			}
 		}
-		
+
 		if hasDockerProjects {
 			if err := docker.CheckDockerAvailable(ctx); err != nil {
 				return fmt.Errorf("Docker is required but not available: %w", err)
 			}
-			
+
 			// Login to registries if credentials are available
 			for registry := range registriesToLogin {
 				if err := docker.LoginToRegistry(ctx, registry, logger); err != nil {
 					logger.Warn("failed to login to registry", map[string]interface{}{
 						"registry": registry,
-						"error": err,
+						"error":    err,
 					})
 				}
 			}
@@ -178,7 +178,7 @@ func runBuild() error {
 		go func(task planner.Task) {
 			defer func() { <-sem }()
 			start := time.Now()
-			
+
 			// Generate cache key
 			cacheKey, err := cache.Key(task, workspaceRoot)
 			if err != nil {
@@ -186,9 +186,9 @@ func runBuild() error {
 				errCh <- err
 				return
 			}
-			
+
 			outDir := filepath.Join("out", task.Path, task.Version)
-			
+
 			// Check cache if not disabled
 			var reused bool
 			if !*flagNoCache && cache.Exists(cacheKey) {
@@ -221,14 +221,14 @@ func runBuild() error {
 					errCh <- runErr
 					return
 				}
-				
+
 				// Build Docker image if enabled and not disabled by flag
 				if !*flagNoDocker && dockerCfg != nil && dockerCfg.Enabled {
 					// Override push setting if flag is provided
 					if *flagPushImages {
 						dockerCfg.Push = true
 					}
-					
+
 					imageBuilder := docker.NewImageBuilder(logger)
 					if err := imageBuilder.BuildAndPush(ctx, task.Path, dockerCfg, workspaceRoot); err != nil {
 						logger.Error("Docker image build/push failed", map[string]interface{}{"path": task.Path, "error": err})
@@ -236,7 +236,7 @@ func runBuild() error {
 						logger.Warn("continuing with build despite Docker failure", map[string]interface{}{"path": task.Path})
 					}
 				}
-				
+
 				// Store in cache if not disabled
 				if !*flagNoCache {
 					if err := cache.Store(cacheKey, outDir); err != nil {
@@ -248,15 +248,15 @@ func runBuild() error {
 
 			elapsed := time.Since(start)
 			_ = artifact.WriteManifest(outDir, artifact.Manifest{
-				Project: task.Path,
-				Kind: task.Kind,
-				Toolchain: task.Kind,
-				Version: task.Version,
-				Hash: cacheKey,
+				Project:     task.Path,
+				Kind:        task.Kind,
+				Toolchain:   task.Kind,
+				Version:     task.Version,
+				Hash:        cacheKey,
 				BuildTimeMs: elapsed.Milliseconds(),
-				Reused: reused,
+				Reused:      reused,
 			})
-			
+
 			if reused {
 				logger.Info("build reused", map[string]interface{}{"path": task.Path, "elapsed_ms": elapsed.Milliseconds()})
 			} else {
@@ -264,38 +264,44 @@ func runBuild() error {
 			}
 		}(t)
 	}
-	for i := 0; i < cap(sem); i++ { sem <- struct{}{} }
+	for i := 0; i < cap(sem); i++ {
+		sem <- struct{}{}
+	}
 	close(errCh)
-	for e := range errCh { if e != nil { return errors.New("one or more builds failed") } }
+	for e := range errCh {
+		if e != nil {
+			return errors.New("one or more builds failed")
+		}
+	}
 	logger.Info("all tasks completed", nil)
 	return nil
 }
 
 func runClean() error {
 	logger := logging.New(*flagJSON)
-	
+
 	// Remove cache directory
 	cacheDir := ".buildcache"
 	if err := os.RemoveAll(cacheDir); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove cache directory: %w", err)
 	}
-	
+
 	// Remove output directory
 	outDir := "out"
 	if err := os.RemoveAll(outDir); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove output directory: %w", err)
 	}
-	
+
 	logger.Info("clean completed", map[string]interface{}{
 		"cache_dir": cacheDir,
-		"out_dir": outDir,
+		"out_dir":   outDir,
 	})
 	return nil
 }
 
 func runInspect(key string) error {
 	logger := logging.New(*flagJSON)
-	
+
 	// Try to find manifest in cache first, then in output directory
 	manifestPath := filepath.Join(".buildcache", key, "manifest.json")
 	if _, err := os.Stat(manifestPath); os.IsNotExist(err) {
@@ -303,7 +309,7 @@ func runInspect(key string) error {
 		possiblePaths := []string{
 			filepath.Join("out", key, "manifest.json"),
 		}
-		
+
 		found := false
 		for _, path := range possiblePaths {
 			if _, err := os.Stat(path); err == nil {
@@ -312,23 +318,23 @@ func runInspect(key string) error {
 				break
 			}
 		}
-		
+
 		if !found {
 			return fmt.Errorf("manifest not found for key: %s", key)
 		}
 	}
-	
+
 	// Validate the manifest path
 	if err := validatePath(manifestPath); err != nil {
 		return fmt.Errorf("invalid manifest path: %w", err)
 	}
-	
+
 	// #nosec G304 - Path is validated above to prevent traversal attacks
 	data, err := os.ReadFile(manifestPath)
 	if err != nil {
 		return fmt.Errorf("failed to read manifest: %w", err)
 	}
-	
+
 	if *flagJSON {
 		fmt.Print(string(data))
 	} else {
@@ -336,7 +342,7 @@ func runInspect(key string) error {
 		if err := json.Unmarshal(data, &manifest); err != nil {
 			return fmt.Errorf("failed to parse manifest: %w", err)
 		}
-		
+
 		fmt.Printf("Manifest for key: %s\n", key)
 		fmt.Printf("  Project: %s\n", manifest.Project)
 		fmt.Printf("  Kind: %s\n", manifest.Kind)
@@ -347,7 +353,7 @@ func runInspect(key string) error {
 		fmt.Printf("  Reused: %t\n", manifest.Reused)
 		fmt.Printf("  Created At: %s\n", manifest.CreatedAt)
 	}
-	
+
 	logger.Info("inspect completed", map[string]interface{}{"key": key, "path": manifestPath})
 	return nil
 }
@@ -375,19 +381,19 @@ func printPlan(p planner.Plan) {
 
 func fatal(err error) {
 	fmt.Fprintln(os.Stderr, "Error:", err)
-	
+
 	// Determine appropriate exit code based on error type
 	exitCode := ExitInternalError // default
 	errStr := err.Error()
-	
-	if strings.Contains(errStr, "load config") || 
-	   strings.Contains(errStr, "parse yaml") ||
-	   strings.Contains(errStr, "config error") {
+
+	if strings.Contains(errStr, "load config") ||
+		strings.Contains(errStr, "parse yaml") ||
+		strings.Contains(errStr, "config error") {
 		exitCode = ExitConfigError
 	} else if strings.Contains(errStr, "build failed") ||
-	         strings.Contains(errStr, "one or more builds failed") {
+		strings.Contains(errStr, "one or more builds failed") {
 		exitCode = ExitBuildFailure
 	}
-	
+
 	os.Exit(exitCode)
 }

@@ -33,8 +33,14 @@ jobs:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.should_build == 'true' }}
     runs-on: ubuntu-latest
+    outputs:
+      docker_username: ${{ steps.secrets.outputs.DOCKER_USERNAME }}
+      docker_password: ${{ steps.secrets.outputs.DOCKER_PASSWORD }}
+      telegram_chat_id: ${{ steps.secrets.outputs.TELEGRAM_CHAT_ID }}
+      telegram_bot_token: ${{ steps.secrets.outputs.TELEGRAM_BOT_TOKEN }}
     steps:
       - name: Get Secrets
+        id: secrets
         uses: bitwarden/sm-action@v2
         with:
           access_token: $BW_ACCESS_TOKEN
@@ -54,7 +60,7 @@ jobs:
         with:
           username: $DOCKER_USERNAME
           password: $DOCKER_PASSWORD
-
+         
       - name: Run tests
         run: go test -v ./...
 

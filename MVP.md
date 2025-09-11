@@ -20,7 +20,7 @@ A Go CLI that reproducibly builds:
 
 ## High-Level Architecture
 ```
-cmd/buildtool (main)
+main.go (main entry point)
 internal/
   config (parse YAML/JSON)
   planner (expand matrix)
@@ -32,6 +32,7 @@ internal/
   artifact (store + manifest)
   logging (structured)
   detect (infer project type)
+  docker (image building and registry operations)
 pkg/
   semver utils
   hashing
