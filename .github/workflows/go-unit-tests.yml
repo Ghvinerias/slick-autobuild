@@ -29,7 +29,7 @@ jobs:
         id: secrets
         uses: bitwarden/sm-action@v2
         with:
-          access_token: $BW_ACCESS_TOKEN
+          access_token: ${{ secrets.BW_ACCESS_TOKEN }}
           base_url: https://vault.bitwarden.com
           secrets: |
             2f3b9e39-4af4-463e-bfae-b35400c41034 > TELEGRAM_CHAT_ID
