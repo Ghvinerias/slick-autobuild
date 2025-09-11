@@ -46,7 +46,7 @@ jobs:
           fail_ci_if_error: false
 
   notify:
-    needs: [test]
+    #needs: [test]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
