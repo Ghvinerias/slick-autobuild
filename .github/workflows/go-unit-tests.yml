@@ -17,6 +17,7 @@ on:
       - "**/*.go"
       - "go.mod"
       - "go.sum"
+  workflow_dispatch:
 
 jobs:
   test:
@@ -61,8 +62,8 @@ jobs:
       - name: Send Telegram notification
         uses: appleboy/telegram-action@master
         with:
-          to: $TELEGRAM_CHAT_ID
-          token: $TELEGRAM_BOT_TOKEN
+          to: "$TELEGRAM_CHAT_ID"
+          token: "$TELEGRAM_BOT_TOKEN"
           message: |
             🧪 Go Unit Tests: ${{ needs.test.result == 'success' && '✅ Success' || '❌ Failed' }}
 
