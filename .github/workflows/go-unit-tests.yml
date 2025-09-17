@@ -55,7 +55,6 @@ jobs:
         uses: bitwarden/sm-action@v2
         with:
           access_token: ${{ secrets.BW_ACCESS_TOKEN }}
-          base_url: https://vault.bitwarden.com
           secrets: |
             2f3b9e39-4af4-463e-bfae-b35400c41034 > TELEGRAM_CHAT_ID
             7ceeeaf0-9ce5-4fde-ad1a-b35400c3dcd4 > TELEGRAM_BOT_TOKEN
