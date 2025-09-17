@@ -1,21 +1,54 @@
-name: Tests
-
-permissions:
-  contents: read
-  actions: read
+name: BW Secret fetch & verify
 
 on:
   workflow_dispatch:
 
 jobs:
-  test:
+  fetch-and-verify:
     runs-on: ubuntu-latest
     steps:
-      - name: Get Secrets
-        uses: bitwarden/sm-action@v1
+      - name: Checkout (optional)
+        uses: actions/checkout@v4
+
+      # 1) Fetch Bitwarden Secret -> env var TEST_EXAMPLE
+      - name: Get secret from Bitwarden SM
+        id: bw
+        uses: bitwarden/sm-action@v2
         with:
           access_token: ${{ secrets.BW_ACCESS_TOKEN }}
           secrets: |
             176a0cb6-2c1a-4b36-b46a-b35b012335eb > TEST_EXAMPLE
-      - name: Use Secret
-        run: echo "$TEST_EXAMPLE"
+
+      # 2) Mask the value in logs (extra precaution)
+      - name: Mask fetched value
+        run: |
+          if [ -n "${TEST_EXAMPLE:-}" ]; then
+            echo "::add-mask::$TEST_EXAMPLE"
+          fi
+
+      # 3) Sanity check
+      - name: Sanity check
+        run: |
+          if [ -z "${TEST_EXAMPLE:-}" ]; then
+            echo "TEST_EXAMPLE is empty or not set"; exit 1
+          fi
+          echo "TEST_EXAMPLE is set correctly (value is masked)."
+
+      # 4) Verify hash of the secret
+      - name: Verify hash
+        run: |
+          set -euo pipefail
+          calc_hash="$(printf '%s' "$TEST_EXAMPLE" | sha256sum | awk '{print $1}')"
+          expected_hash="2a852dc6b68b011eec71ef5f30d6b7f9fdcd19c012fbdaac6255f403d70f9b6b"
+          if [ "$calc_hash" != "$expected_hash" ]; then
+            echo "Secret hash mismatch!"
+            echo "Expected: $expected_hash"
+            echo "Got: $calc_hash"
+            exit 1
+          fi
+          echo "Secret hash matches expected value ✅"
+
+      # 5) Example use without printing the secret
+      - name: Use the secret (example)
+        run: |
+          echo "The secret is ready to use in other steps."
