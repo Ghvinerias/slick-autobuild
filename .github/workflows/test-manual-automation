@@ -1,0 +1,21 @@
+name: Tests
+
+permissions:
+  contents: read
+  actions: read
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get Secrets
+        uses: bitwarden/sm-action@v1
+        with:
+          access_token: ${{ secrets.BW_ACCESS_TOKEN }}
+          secrets: |
+            176a0cb6-2c1a-4b36-b46a-b35b012335eb > TEST_EXAMPLE
+      - name: Use Secret
+        run: echo "$TEST_EXAMPLE"
