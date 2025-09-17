@@ -39,7 +39,6 @@ jobs:
         uses: bitwarden/sm-action@v2
         with:
           access_token: ${{ secrets.BW_ACCESS_TOKEN }}
-          base_url: https://vault.bitwarden.com
           secrets: |
             a35d32e4-fc58-4d80-a927-b35400c210f7 > DOCKER_USERNAME
             5f8b4016-fb5d-45fc-9e13-b35400be5c46 > DOCKER_PASSWORD
@@ -53,8 +52,8 @@ jobs:
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
-          username: $DOCKER_USERNAME
-          password: $DOCKER_PASSWORD
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ env.DOCKER_PASSWORD }}
          
       - name: Run tests
         run: go test -v ./...
@@ -89,15 +88,14 @@ jobs:
         uses: bitwarden/sm-action@v2
         with:
           access_token: ${{ secrets.BW_ACCESS_TOKEN }}
-          base_url: https://vault.bitwarden.com
           secrets: |
             2f3b9e39-4af4-463e-bfae-b35400c41034 > TELEGRAM_CHAT_ID
             7ceeeaf0-9ce5-4fde-ad1a-b35400c3dcd4 > TELEGRAM_BOT_TOKEN
       - name: Send Telegram notification
         uses: appleboy/telegram-action@master
         with:
-          to: $TELEGRAM_CHAT_ID
-          token: $TELEGRAM_BOT_TOKEN
+          to: ${{ env.TELEGRAM_CHAT_ID }}
+          token: ${{ env.TELEGRAM_BOT_TOKEN }}
           message: |
             🐳 Docker image build status: ${{ needs.build-and-push.result == 'success' && '✅ Success' || '❌ Failed' }}
 

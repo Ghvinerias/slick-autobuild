@@ -21,7 +21,7 @@ import (
 	"slick-autobuild/internal/runner"
 )
 
-// validatePath ensures the path is safe and doesn't contain path traversal attempts
+// validatePath ensures the path is safe and doesn't contain path traversal attempts !
 func validatePath(path string) error {
 	// Clean the path to resolve any .. or . components
 	cleanPath := filepath.Clean(path)
