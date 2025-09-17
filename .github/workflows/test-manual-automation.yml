@@ -1,54 +1,63 @@
-name: BW Secret fetch & verify
+name: Telegram notify via Bitwarden SM
 
 on:
   workflow_dispatch:
 
 jobs:
-  fetch-and-verify:
+  notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (optional)
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # 1) Fetch Bitwarden Secret -> env var TEST_EXAMPLE
-      - name: Get secret from Bitwarden SM
-        id: bw
+      # 1) Fetch secrets from Bitwarden SM
+      - name: Get Secrets
+        id: secrets
         uses: bitwarden/sm-action@v2
         with:
           access_token: ${{ secrets.BW_ACCESS_TOKEN }}
+          # For Bitwarden Cloud, omit base_url; optionally set cloud_region: us|eu
+          cloud_region: us
           secrets: |
-            176a0cb6-2c1a-4b36-b46a-b35b012335eb > TEST_EXAMPLE
+            2f3b9e39-4af4-463e-bfae-b35400c41034 > TELEGRAM_CHAT_ID
+            7ceeeaf0-9ce5-4fde-ad1a-b35400c3dcd4 > TELEGRAM_BOT_TOKEN
 
-      # 2) Mask the value in logs (extra precaution)
-      - name: Mask fetched value
-        run: |
-          if [ -n "${TEST_EXAMPLE:-}" ]; then
-            echo "::add-mask::$TEST_EXAMPLE"
-          fi
-
-      # 3) Sanity check
-      - name: Sanity check
-        run: |
-          if [ -z "${TEST_EXAMPLE:-}" ]; then
-            echo "TEST_EXAMPLE is empty or not set"; exit 1
-          fi
-          echo "TEST_EXAMPLE is set correctly (value is masked)."
-
-      # 4) Verify hash of the secret
-      - name: Verify hash
+      # 2) Extra masking & sanity checks (no secret printed)
+      - name: Mask and validate
+        shell: bash
         run: |
           set -euo pipefail
-          calc_hash="$(printf '%s' "$TEST_EXAMPLE" | sha256sum | awk '{print $1}')"
-          expected_hash="2a852dc6b68b011eec71ef5f30d6b7f9fdcd19c012fbdaac6255f403d70f9b6b"
-          if [ "$calc_hash" != "$expected_hash" ]; then
-            echo "Secret hash mismatch!"
-            echo "Expected: $expected_hash"
-            echo "Got: $calc_hash"
-            exit 1
-          fi
-          echo "Secret hash matches expected value ✅"
 
-      # 5) Example use without printing the secret
-      - name: Use the secret (example)
-        run: |
-          echo "The secret is ready to use in other steps."
+          # Belt & suspenders masking
+          [ -n "${TELEGRAM_CHAT_ID:-}" ] && echo "::add-mask::$TELEGRAM_CHAT_ID"
+          [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && echo "::add-mask::$TELEGRAM_BOT_TOKEN"
+
+          # Non-empty checks
+          if [ -z "${TELEGRAM_CHAT_ID:-}" ]; then
+            echo "TELEGRAM_CHAT_ID is empty"; exit 1
+          fi
+          if [ -z "${TELEGRAM_BOT_TOKEN:-}" ]; then
+            echo "TELEGRAM_BOT_TOKEN is empty"; exit 1
+          fi
+
+          # Optional: basic format checks (adjust to your case)
+          # Chat IDs are usually integers; channels/groups may be negative.
+          if ! [[ "$TELEGRAM_CHAT_ID" =~ ^-?[0-9]+(,-?[0-9]+)*$ ]]; then
+            echo "Warning: TELEGRAM_CHAT_ID doesn't look numeric; continuing anyway."
+          fi
+          if ! [[ "$TELEGRAM_BOT_TOKEN" =~ ^[0-9]+:[A-Za-z0-9_-]+$ ]]; then
+            echo "Warning: TELEGRAM_BOT_TOKEN doesn't match expected token format; continuing anyway."
+          fi
+
+          # Debug without leaking: show lengths only
+          echo "TELEGRAM_CHAT_ID length: ${#TELEGRAM_CHAT_ID}"
+          echo "TELEGRAM_BOT_TOKEN length: ${#TELEGRAM_BOT_TOKEN}"
+
+      # 3) Send Telegram message (use GHA expressions, not $VAR)
+      - name: Send Telegram notification
+        uses: appleboy/telegram-action@v1.0.0
+        with:
+          to: ${{ env.TELEGRAM_CHAT_ID }}
+          token: ${{ env.TELEGRAM_BOT_TOKEN }}
+          message: |
+            🧪 Go Unit Tests: ✅ Success
+
